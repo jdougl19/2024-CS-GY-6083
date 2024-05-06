@@ -37,13 +37,13 @@ def home():
     
     # Get the user email from the session to use in queries
     user_email = session['user']['email']  # assuming 'user' in session contains the email
-
+    user_id= session['user']['id']
     # Prepare a cursor to execute queries
     cursor = conn.cursor()
 
     # Query to fetch user details from Users table
     user_query = """
-    SELECT firstname, lastname, lastlogin,userid
+    SELECT firstname, lastname, lastlogin,email, streetaddress,city,state,zip,userid
     FROM users
     WHERE email = %s
     """
@@ -54,10 +54,10 @@ def home():
     if user_data is None:
         return "User not found", 404
 
-    firstname, lastname, lastLogin, user_id = user_data
+    firstname, lastname, lastLogin, email, streetaddress,city,state, zip, user_id = user_data
      # Query to fetch user profile details
     profile_query = """
-    SELECT profiletext
+    SELECT profiletext,familydetails
     FROM userprofile
     WHERE userid = %s
     """
@@ -66,22 +66,53 @@ def home():
 
     # If profile not found, use a default message
     Profiletext = profile_result[0] if profile_result else "No profile available"
+    familydetails = profile_result[1] if profile_result else "No profile available"
 
+    #gets friends last login and who you are friends with 
+    friends_query =  """
+            SELECT u.firstname, u.lastname, u.lastlogin
+            FROM users u
+            JOIN friendship f ON u.userid = f.receiver_id OR u.userid = f.requester_id
+            WHERE (f.receiver_id = %s OR f.requester_id = %s) AND f.status = 'Accepted'
+            AND u.userid != %s;
+        """
+    #firstname,lastname,lastlogin = friends_data
+    cursor.execute(friends_query, (user_id,user_id,user_id,))
+    friends = cursor.fetchall()
+    pendingfriends_query =  """
+            SELECT u.firstname, u.lastname, u.lastlogin
+            FROM users u
+            JOIN friendship f ON u.userid = f.receiver_id OR u.userid = f.requester_id
+            WHERE (f.receiver_id = %s OR f.requester_id = %s) AND f.status = 'Pending'
+            AND u.userid != %s;
+        """
+    #firstname,lastname,lastlogin = friends_data
+    cursor.execute(pendingfriends_query, (user_id,user_id,user_id,))
+    pendingfriends = cursor.fetchall()
+    print(pendingfriends)
     # Close cursor and connection
     cursor.close()
 
     #lastLogin = 'now'
     #ProfiletText = 'blah blah'
- 
+    print("Friends:", friends) 
     # Render the homepage with the fetched data
     return render_template('homepage.html',
                            firstname=firstname,
                            lastname=lastname,
-                            lastLogin=lastLogin,
-                           Profiletext=Profiletext
+                           lastLogin=lastLogin,
+                           email=email,
+                           Profiletext=Profiletext,
+                           familydetails=familydetails,
+                           street=streetaddress,
+                           city=city,
+                           state=state,
+                           zip=zip,
+                           friends=friends,
+                           pendingFriends=pendingfriends
+                           
+
                            )
-
-
 
 @app.route('/login', methods=['GET'])
 def login():
@@ -115,7 +146,11 @@ def loginAuth():
                 'id': records[0][0] ,
                 'firstname': records[0][1],
                 'lastname': records[0][2],
-                'email': records[0][7]
+                'email': records[0][7],
+                'streetaddress': records[0][3],
+                'city': records[0][4],
+                'state': records[0][5],
+                'zip': records[0][6]
             }
 
             # Update last login time and commit
@@ -201,47 +236,85 @@ def register_user():
             response.headers["Content-Type"] = "application/json"
             return response
 
-@app.route('/edit-account-setting', methods=['POST'])
-def update_user():
-    return render_template('edit-account-setting.html')
-@app.route('/messages/<message_filter>', methods=['GET'])
-def search_messages(message_filter):
-    if message_filter not in ("Block","Hood","Friend","Neighbor"):
-        return make_response(jsonify({"message": "Invalid Visibility Filter. Valid Values are Block,Hood,Friend,Neighbor.   "}), 404)
-    user_email = 'eva@example.com'
-    if "email" in session:
-        user_email = session['email']
-    if not user_email:
-        return make_response(jsonify({"message": "User Session cannot be found "}), 404)
-
-    query = "SELECT userid from users WHERE email = %s "
-    cursor.execute(query,(user_email,))
+@app.route('/timeline', methods=['GET','POST'])
+def showTimeline():
+    # Check if the user is not logged in and redirect if necessary
+    if 'user' not in session:
+        return redirect(url_for('login'))
     
-    result = cursor.fetchone()
-    if not result:
-        return make_response(jsonify({"message": "User does not exist"}), 404)
-    user_id = result[0]
+    # Get the user email from the session to use in queries
+    user_id= session['user']['id']
+
+    message_filter = None
+
+    # Prepare a cursor to execute queries
+    cursor = conn.cursor()
    
-    query = """ select m.TextBody,t.ThreadID, t.Subject
-            From Thread t
-            JOIN Message m on m.ThreadiD = t.ThreadID
-            JOIN MessageRecipient mr on mr.MessageID = m.MessageID
-            JOIN Users u on u.UserID = mr.RecipientID
-            where m.VisibilityType = %s AND u.UserID = %s
-            AND mr.isRead = FALSE"""
-    cursor.execute(query,(message_filter,user_id,))
+    query = """ 
+        SELECT 
+            m.TextBody,t.ThreadID, t.Subject
+        FROM Thread t
+        JOIN Message m on m.ThreadiD = t.ThreadID
+        JOIN MessageRecipient mr on mr.MessageID = m.MessageID
+        JOIN Users u on u.UserID = mr.RecipientID
+        WHERE 
+            u.UserID = %s
+            AND mr.isRead = FALSE
+    """
+
+    values = [user_id]
+    if message_filter is not None:
+        query += ' AND m.VisibilityType = %s '
+        values.append(message_filter)
+
+    cursor.execute(query, values)
     result = cursor.fetchall()
-    data = []
+    feed = []
     for row in result:
         text, thread, subject = row[0],row[1], row[2]
-        r = dict(
-            text=text, 
-            thread=thread,
-            subject=subject
-        )
-        data.append(r)
+        r = dict(text=text, thread=thread, subject=subject)
+        feed.append(r)
+    return render_template('timeline.html',feed=feed)
+        
+@app.route('/editAccountSettings', methods=['GET','POST'])
+def editSettings():
+    # Check if the user is not logged in and redirect if necessary
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    # Get the user email from the session to use in queries
+    user_id= session['user']['id']
 
-    return make_response(jsonify(data),200) 
+    message_filter = None
+
+    # Prepare a cursor to execute queries
+    cursor = conn.cursor()
+   
+    query = """ 
+        SELECT 
+            m.TextBody,t.ThreadID, t.Subject
+        FROM Thread t
+        JOIN Message m on m.ThreadiD = t.ThreadID
+        JOIN MessageRecipient mr on mr.MessageID = m.MessageID
+        JOIN Users u on u.UserID = mr.RecipientID
+        WHERE 
+            u.UserID = %s
+            AND mr.isRead = FALSE
+    """
+
+    values = [user_id]
+    if message_filter is not None:
+        query += ' AND m.VisibilityType = %s '
+        values.append(message_filter)
+
+    cursor.execute(query, values)
+    result = cursor.fetchall()
+    feed = []
+    for row in result:
+        text, thread, subject = row[0],row[1], row[2]
+        r = dict(text=text, thread=thread, subject=subject)
+        feed.append(r)
+    return render_template('editAccountSettings.html',)
 
 if __name__ == "__main__":
     app.run(debug=True)

@@ -1,58 +1,61 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-	<meta charset="utf-8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta name="description" content="Start your development with JohnDoe landing page.">
     <meta name="author" content="Devcrud">
-    
+
     <!-- font icons -->
     <link rel="stylesheet" href="assets/vendors/themify-icons/css/themify-icons.css">
- 
-	<link rel="stylesheet" href="/static/css/johndoe.css">
+
+    <link rel="stylesheet" href="/static/css/johndoe.css">
 </head>
+
 <body data-spy="scroll" data-target=".navbar" data-offset="40" id="home">
-    <a href="components.html" class="btn btn-primary btn-component" data-spy="affix" data-offset-top="600"><i class="ti-shift-left-alt"></i> Components</a>
+    <a href="components.html" class="btn btn-primary btn-component" data-spy="affix" data-offset-top="600"><i
+            class="ti-shift-left-alt"></i> Components</a>
     <header class="header">
         <div class="container">
-            
-            
+
+
         </div>
     </header>
-    
+
     <nav class="navbar sticky-top navbar-expand-lg navbar-light bg-white" data-spy="affix" data-offset-top="510">
         <div class="container">
-            <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler ml-auto" type="button" data-toggle="collapse"
+                data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false"
+                aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse mt-sm-20 navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
-                        <a href="homepage.html" class="nav-link">Home</a>
+                        <a href="/homepage" class="nav-link">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a href="#about" class="nav-link">Time Line</a>
+                        <a href="/timeline" class="nav-link">Time Line</a>
                     </li>
                     <li class="nav-item">
                         <a href="#resume" class="nav-link">Friends</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav brand">
-                    <img src="assets/imgs/userAvatar.jpg" alt="" class="brand-img">
+                    <img src="static/imgs/userAvatar.jpg" alt="" class="brand-img">
                     <li class="brand-txt">
-                        <h5 class="brand-title">John Doe</h5>
-                        <div class="brand-subtitle">Web Designer | Developer</div>
+                        
                     </li>
                 </ul>
-                
+
                 <ul class="navbar-nav ml-auto">
                     <li class="nav-item">
-                        <a href="edit-account-setting.html" class="nav-link">Account Settings</a>
+                        <a href="/editAccountSettings" class="nav-link">Account Settings</a>
                     </li>
                     <li class="nav-item">
-                        <a href="./login.html" class="nav-link">Log Out</a>
+                        <a href="/logout" class="nav-link">Log Out</a>
                     </li>
-                    
                 </ul>
             </div>
         </div>
@@ -114,11 +117,15 @@
                         <div class="col-1 text-danger pt-1"><i class="ti-widget icon-lg"></i></div>
                         <div class="col-10 ml-auto mr-3">
                             <h6 id="feed-section-header">Feeds</h6>
-                            <p id="feed-section-body"class="subtitle"></p>
-                           
+                            <p id="feed-section-body" class="subtitle"></p>
+                            <ul>
+                                {%for row in feed%}
+                                    <li>{{row.xx}}</li> test
+                                {%endfor%}
+                            </ul>
                         </div>
                     </div>
-                    
+
                     <!-- Other messages sections -->
                 </div>
                 <div class="col-lg-4 about-card">
@@ -129,111 +136,27 @@
             </div>
         </div>
     </section>
-    
-      <script>
-        const body = document.getElementsByTagName('body');
-        const form = document.getElementById('user-update-form');
-        function updateUser(event) {
-          event.preventDefault();  // Prevent the default form submission behavior
-      
-          // Retrieve the form data
-          const email = document.getElementById('email').value;
-          const password = document.getElementById('new_password').value;
-          const street = document.getElementById('street').value;
-          const city = document.getElementById('city').value;
-          const state = document.getElementById('state').value;
-          const zipcode = document.getElementById('zipcode').value;
-          const profileText = document.getElementById('profileText').value;
-          const photoUrl = document.getElementById('photoUrl').value;
-          const familyDetails = document.getElementById('familyDetails').value;
-      
-          // Construct the payload
-          const params = {
-            "email": email,
-            "password": password,
-            "street": street,
-            "city": city,
-            "state": state,
-            "zipcode": zipcode,
-            "profileText": profileText,
-            "photoUrl": photoUrl,
-            "familyDetails": familyDetails
-          };
-      
-          // Define the fetch configuration
-          const fetchConfig = {
-            method: "POST",
-            headers: {
-              'Content-Type': 'application/json'  // Properly set Content-Type
-            },
-            body: JSON.stringify(params),
-          };
-      
-          // Send the request and process the response
-          fetch("/edit-account-setting", fetchConfig)
-            .then(response => response.json())  // Parse JSON response
-            .then(data => {
-              if (data.message) {
-                alert(data.message);  // Alert the user with the message from the server
-              }
-            })
-            .catch(error => {
-              console.error('Error:', error);
-              alert('Failed to update user information');
-            });
-        }
-        function appendMessages(data,filter){
-            const feedHeader = document.getElementById('feed-section-header')
-            const feedBody = document.getElementById('feed-section-body')
-            if(feedHeader && feedBody){
-                feedHeader.textContent = `${filter} Feed`
-                feedBody.innerHTML = data.map(row => {
-                    const html = ""
-                    return html
-                })
 
-            }
-        }
-        function fetchMessages(){
-            const location = window.location
-            const params = new URLSearchParams(location.search)
-            const messageFilter = params.get("message_filter")
-            if(messageFilter?.length){
-                const url=`http://localhost:8000/messages/${messageFilter}`;
-                const getInit = {
-                    method: "GET",
-                    "Content-Type": "application/json"
-                }
-                fetch(url,getInit).then(res => {
-                    const { data } = res
-                    appendMessages(data,messageFilter)  
-                }).catch(error => alert(error))
-            }
-        }
-        // Attach the event listener to the form submission
-        form.addEventListener("submit", updateUser);
-        body.addEventListener("load", fetchMessages);
-
-      </script>
-      
-            
-        
     
+
+
+
 
     <!--reset Section-->
-    
-   
-    
+
+
+
     </section>
 
-               
-            </div>
 
-        </div>
+    </div>
+
+    </div>
     </div>
     <footer class="footer py-3">
-        
+
     </footer>
 
 </body>
+
 </html>
