@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.7.1/Chart.min.js"></script>
+    <title>Energy Usage By Week</title>
+  </head>
+  <body>
+    <!-- <div style="width: 500px;"><canvas id="dimensions"></canvas></div><br/> -->
+    <div style="width: 1000px;"><canvas id="eBW"></canvas></div>
+  </body>
+    <!-- <script type="module" src="dimensions.js"></script> -->
+  <!-- <script type="module" src="acquisitions.js"></script> -->
+  <script>
+    (async function() {
+  const data = [
+    { date: "2022-08-01", count: 4},
+    { date: "2022-08-08", count: 4},
+    { date: "2022-08-15", count: 0},
+    { date: "2022-08-22", count: 4},
+    { date: "2022-08-29", count: 12},
+    { date: "2022-09-05", count: 4}
+  ];
+
+  new Chart(
+    document.getElementById('eBW'),
+    {
+      type: 'line',
+      data: {
+        labels: data.map(row => row.date),
+        datasets: [
+          {
+            label: 'Energy Usage by Week',
+            data: data.map(row => row.count),
+            borderColor: 'rgb(75, 192, 192)',
+            fill: false,
+            tension: 0.1
+          }
+        ]
+      }
+    }
+  );
+})();
+  </script>
+</html>
