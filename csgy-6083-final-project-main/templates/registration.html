@@ -95,7 +95,7 @@
 </head>
 <body>
   <div class="register-container">
-    <form id="register-form" action="#" method="POST" >
+    <form id="register-form" action="/registerAuth" method="POST" >
         <label for="fname">First Name:</label>
         <input type="text" placeholder="First Name" id="fname" name="fname" required>
 
@@ -126,43 +126,7 @@
     </form>
   </div>
 
-    <script>
-      const form = document.getElementById('register-form')
-      function register(event) {
-        event.preventDefault();
-        if (document.getElementById('register-form')){
-          const fname = document.getElementById('fname').value;
-          const lname = document.getElementById('lname').value;
-          const street = document.getElementById('street').value;
-          const city = document.getElementById('city').value;
-          const state = document.getElementById('state').value;
-          const zipcode = document.getElementById('zipcode').value;
-          const email = document.getElementById('email').value;
-          const password = document.getElementById('password').value;
-
-          const params = {
-              "email": email,
-              "password": password,
-              "fname": fname,
-              "lname": lname,
-              "street": street,
-              "city": city,
-              "state": state,
-              "zipcode": zipcode
-          };
-          const url = "/register";
-          const getInit = {
-            method: "POST",
-            "Content-Type": "application/json",
-            body: JSON.stringify(params),
-          }
-          const response = fetch(url, getInit)
-          response.then(res => {
-            const { data } = res 
-          })
-      }
-    }
-    form.addEventListener("submit", register)
-  </script>
+    
+     
 </body>
 </html>

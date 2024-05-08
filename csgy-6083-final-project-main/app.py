@@ -164,25 +164,25 @@ def loginAuth():
     else:
             return redirect(url_for('login')) # 'user not found']
  
-@app.route('/register', methods=['POST'])
+@app.route('/registerAuth', methods=['POST'])
 def register_user():
-    first_name = request.json['fname']
-    last_name = request.json['lname']
+    first_name = request.form['fname']
+    last_name = request.form['lname']
 
-    street_addr = request.json['street']
-    city = request.json['city']
-    state = request.json['state']
-    zip_code = int(request.json['zipcode'])
+    street_addr = request.form['street']
+    city = request.form['city']
+    state = request.form['state']
+    zip_code = int(request.form['zipcode'])
 
-    email = request.json['email']
-    password = request.json['password']
+    email = request.form['email']
+    password = request.form['password']
     
     
 
     query = ("select * from users where email = %s")
     cursor.execute(query, (email,))
     
-    records = cursor.fetchall()
+    records = cursor.fetchone()
     neighborhood_center_lat = 35.0
     neighborhood_center_long = -74.0
     lat_range = (neighborhood_center_lat - 0.01, neighborhood_center_lat + 0.01)  # Adjust the range as needed
@@ -190,19 +190,13 @@ def register_user():
     home_coords_lat = round(random.uniform(lat_range[0], lat_range[1]), 6)
     home_coords_long = round(random.uniform(long_range[0], long_range[1]), 6)
     last_login = datetime.datetime.now().strftime('%Y-%m-%d')
-   
-    if (records):
-        response = make_response(
-            jsonify(
-                {"message": "User already exists."}
-            ),
-            400
-        )
-        response.headers["Content-Type"] = "application/json"
-        return response
-    else:
-        last_id_query = ("SELECT userid FROM users ORDER BY userid DESC LIMIT 1")
-      
+    error = None
+    if records:
+         # If the previous query returns data, then user exists
+        error = "This user already exists"
+        print(records)
+        return render_template('login.html', error=error)
+    else
         cursor.execute(last_id_query)
         records = cursor.fetchall()
         #HomeCords Lat and log are auto generated
@@ -213,29 +207,49 @@ def register_user():
         try:
             cursor.execute(query, ( lastest_user_id + 1, first_name, last_name, street_addr, city, state, zip_code, email, password,1,1, home_coords_lat, home_coords_long, last_login))
             conn.commit()
-            response = make_response(
-                jsonify(
-                    {
-                        "message": "User registered successfully!",
-                        "userid": int(records[0]['userid']) + 1,
-                        "email": email
-                    }
-                ),
-                201
-            )
-            response.headers["Content-Type"] = "application/json"
-            session['userid'] = email
-            return response
-        except Exception as e:
-            response = make_response(
-                jsonify(
-                    {"message": f"Error registering user: {str(e)}"}
-                ),
-                404
-            )
-            response.headers["Content-Type"] = "application/json"
-            return response
+         
+              return render_template('homepage.html')
 
+@app.route('/registerAuth', methods=['GET', 'POST'])
+def registerAuth():
+    email = request.form['email']
+    password = request.form['password']
+
+    # Prepare the cursor and database connection
+    cursor = conn.cursor()
+    #query = ("SELECT UserId, Password FROM users WHERE email = %s")
+    query = ("SELECT * FROM users WHERE email = %s")
+
+    cursor.execute(query, (email,))
+    session['userid'] = email
+    records = cursor.fetchall()
+    
+    if records:
+        print(records)
+        if records[0][8] == password:
+            # update the session with the new current user
+            session['user'] = {
+                'id': records[0][0] ,
+                'firstname': records[0][1],
+                'lastname': records[0][2],
+                'email': records[0][7],
+                'streetaddress': records[0][3],
+                'city': records[0][4],
+                'state': records[0][5],
+                'zip': records[0][6]
+            }
+
+            # Update last login time and commit
+            updateQuery = 'UPDATE users SET lastlogin = %s WHERE userid = %s'
+            cursor.execute(updateQuery, (datetime.datetime.now(), records[0][0]))
+            conn.commit()
+                   
+            return redirect(url_for('home'))
+        else:
+            return redirect(url_for('login')) # 'bad username or password'
+    else:
+            return redirect(url_for('login')) # 'user not found']
+ 
 @app.route('/timeline', methods=['GET','POST'])
 def showTimeline():
     # Check if the user is not logged in and redirect if necessary
@@ -245,9 +259,10 @@ def showTimeline():
     # Get the user email from the session to use in queries
     user_id= session['user']['id']
 
-    message_filter = None
+    message_filter = request.args.get('message_filter').title()
 
     # Prepare a cursor to execute queries
+
     cursor = conn.cursor()
    
     query = """ 
@@ -274,7 +289,21 @@ def showTimeline():
         text, thread, subject = row[0],row[1], row[2]
         r = dict(text=text, thread=thread, subject=subject)
         feed.append(r)
-    return render_template('timeline.html',feed=feed)
+        print(feed)
+    
+    threads = {}
+    for message in feed:
+        thread_id = message['thread']
+        if thread_id not in threads:
+            threads[thread_id] = {
+                'subject': message['subject'],
+                'messages': []
+            }
+        threads[thread_id]['messages'].append(message)
+
+  
+
+    return render_template('timeline.html',feed=feed,threads=threads.values())
         
 @app.route('/editAccountSettings', methods=['GET','POST'])
 def editSettings():

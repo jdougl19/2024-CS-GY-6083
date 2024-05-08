@@ -1850,7 +1850,33 @@ pre code {
   margin-bottom: 1rem;
   color: #212529;
 }
-
+.message-table {
+  width: 80%;
+  margin: 20px auto;
+  border-collapse: separate; /* Allows for spacing between rows */
+  border-spacing: 0 15px; /* Adds vertical spacing between rows */
+  border-radius: 10px; /* Rounded corners for the table */
+  overflow: hidden; /* Ensures the border-radius clips content properly */
+  background: #f9f9f9; /* Background color for the whole table */
+}
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+  background: white; /* Background color for cells to make text appear "floating" */
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* Subtle shadow for 3D effect */
+}
+th {
+  background-color: #f4f4f4;
+  padding-bottom: 20px;
+  border-top-left-radius: 10px; /* Rounded top left corner */
+  border-top-right-radius: 10px; /* Rounded top right corner */
+}
+td {
+  padding-top: 20px;
+  border-bottom-left-radius: 10px; /* Rounded bottom left corner */
+  border-bottom-right-radius: 10px; /* Rounded bottom right corner */
+}
 .table th,
 .table td {
   padding: 0.75rem;

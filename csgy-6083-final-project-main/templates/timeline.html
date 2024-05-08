@@ -78,15 +78,15 @@
                                                     <ul class="naves">
                                                         <li>
                                                             <i class="ti-clipboard"></i>
-                                                            <a href="?message_filter=Block" title="">Block feeds</a>
+                                                            <a href="?message_filter=block" title="">Block feeds</a>
                                                         </li>
                                                         <li>
                                                             <i class="ti-mouse-alt"></i>
-                                                            <a href="#Hood-feeds" title="">Hood feeds</a>
+                                                            <a href="?message_filter=hood" title="">Hood feeds</a>
                                                         </li>
                                                         <li>
                                                             <i class="ti-files"></i>
-                                                            <a href="#messages" title="">Friend Feeds</a>
+                                                            <a href="?message_filter=friend" title="">Friend Feeds</a>
                                                         </li>
                                                         <li>
                                                             <i class="ti-user"></i>
@@ -116,13 +116,25 @@
                     <div class="row" id="Feed">
                         <div class="col-1 text-danger pt-1"><i class="ti-widget icon-lg"></i></div>
                         <div class="col-10 ml-auto mr-3">
-                            <h6 id="feed-section-header">Feeds</h6>
-                            <p id="feed-section-body" class="subtitle"></p>
-                            <ul>
-                                {%for row in feed%}
-                                    <li>{{row.xx}}</li> test
-                                {%endfor%}
-                            </ul>
+                            <h6 id="feed-section-header">Message Feed</h6>
+                            <p id="feed-section-body" ></p>
+                            {% for thread in threads %}
+        <table class="message-table">
+            <thead>
+                <tr>
+                    <th>{{ thread.subject }}</th> <!-- Thread subject as the header -->
+                </tr>
+            </thead>
+            <tbody>
+                {% for message in thread.messages %}
+                    <tr>
+                        <td>{{ message.text }}</td> <!-- Each message text under the thread subject -->
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endfor %}
+                          {{feed}}
                         </div>
                     </div>
 
