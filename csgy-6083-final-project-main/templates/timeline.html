@@ -16,12 +16,16 @@
 <body data-spy="scroll" data-target=".navbar" data-offset="40" id="home">
     <a href="components.html" class="btn btn-primary btn-component" data-spy="affix" data-offset-top="600"><i
             class="ti-shift-left-alt"></i> Components</a>
-    <header class="header">
-        <div class="container">
-
-
-        </div>
-    </header>
+            <header class="header">
+                <div class="container">
+                    
+                    <div class="header-content">
+                        <h4 class="header-subtitle" ></h4>
+                        <h1 class="header-title">{{firstname}}  {{lastname}}</h1>
+                        <h6 class="header-mono" >Last Online: {{lastlogin}}</h6>
+                    </div>
+                </div>
+            </header>
 
     <nav class="navbar sticky-top navbar-expand-lg navbar-light bg-white" data-spy="affix" data-offset-top="510">
         <div class="container">
@@ -33,7 +37,7 @@
             <div class="collapse mt-sm-20 navbar-collapse" id="navbarSupportedContent">
                 <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
-                        <a href="/homepage" class="nav-link">Home</a>
+                        <a href="/" class="nav-link">Home</a>
                     </li>
                     <li class="nav-item">
                         <a href="/timeline" class="nav-link">Time Line</a>
@@ -71,7 +75,7 @@
                             <div class="row">
                                 <div class="col-lg-12">
                                     <div class="row" id="page-contents">
-                                        <div class="col-lg-10">
+                                        <div class="col-lg-12">
                                             <aside class="sidebar static">
                                                 <div class="widget">
                                                     <h4 class="widget-title">Threads Shortcuts</h4>
@@ -134,7 +138,7 @@
             </tbody>
         </table>
     {% endfor %}
-                          {{feed}}
+                         
                         </div>
                     </div>
 

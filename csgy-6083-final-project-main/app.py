@@ -13,6 +13,7 @@ import pandas as pd
 import datetime
 import random
 from flask_cors import CORS
+from werkzeug.utils import secure_filename
 
 
 app = Flask(__name__)
@@ -110,8 +111,6 @@ def home():
                            zip=zip,
                            friends=friends,
                            pendingFriends=pendingfriends
-                           
-
                            )
 
 @app.route('/login', methods=['GET'])
@@ -150,7 +149,8 @@ def loginAuth():
                 'streetaddress': records[0][3],
                 'city': records[0][4],
                 'state': records[0][5],
-                'zip': records[0][6]
+                'zip': records[0][6],
+                'lastlogin':records[0][13]
             }
 
             # Update last login time and commit
@@ -164,8 +164,14 @@ def loginAuth():
     else:
             return redirect(url_for('login')) # 'user not found']
  
-@app.route('/registerAuth', methods=['POST'])
-def register_user():
+
+
+@app.route('/register')
+def register():
+   return render_template('registration.html')
+
+@app.route('/registerAuth', methods=['GET','POST'])
+def registerAuth():
     first_name = request.form['fname']
     last_name = request.form['lname']
 
@@ -193,63 +199,26 @@ def register_user():
     error = None
     if records:
          # If the previous query returns data, then user exists
-        error = "This user already exists"
-        print(records)
+        error = "It seems like this user already exists, try logging in. "
+        print('record',records)
         return render_template('login.html', error=error)
-    else
-        cursor.execute(last_id_query)
+    else:
+        latest_id_query = ("select userid FROM users ORDER BY userid DESC Limit 1")
+        cursor.execute(latest_id_query)
+        print('latest id',latest_id_query)
         records = cursor.fetchall()
         #HomeCords Lat and log are auto generated
        
         lastest_user_id = records[0][0] 
-        query = ("""insert into users (userid, firstname, lastname, streetaddress, city, state, zip,  email, password, blockid, hoodid, homecoordslat, homecoordslong, lastlogin)
+        query = ("""insert into users (userid , firstname, lastname, streetaddress, city, state, zip,  email, password, blockid, hoodid, homecoordslat, homecoordslong, lastlogin)
         values (%s, %s, %s, %s, %s, %s, %s, %s, %s,%s,%s,%s,%s,%s)""")
-        try:
-            cursor.execute(query, ( lastest_user_id + 1, first_name, last_name, street_addr, city, state, zip_code, email, password,1,1, home_coords_lat, home_coords_long, last_login))
-            conn.commit()
-         
-              return render_template('homepage.html')
-
-@app.route('/registerAuth', methods=['GET', 'POST'])
-def registerAuth():
-    email = request.form['email']
-    password = request.form['password']
-
-    # Prepare the cursor and database connection
-    cursor = conn.cursor()
-    #query = ("SELECT UserId, Password FROM users WHERE email = %s")
-    query = ("SELECT * FROM users WHERE email = %s")
-
-    cursor.execute(query, (email,))
-    session['userid'] = email
-    records = cursor.fetchall()
+        print('latest user',lastest_user_id)
+        cursor.execute(query, ( lastest_user_id + 1, first_name, last_name, street_addr, city, state, zip_code, email, password,None,None, home_coords_lat, home_coords_long, last_login))
+        conn.commit()
+        
+        session['email'] = email
+        return render_template('homepage.html',error=error)
     
-    if records:
-        print(records)
-        if records[0][8] == password:
-            # update the session with the new current user
-            session['user'] = {
-                'id': records[0][0] ,
-                'firstname': records[0][1],
-                'lastname': records[0][2],
-                'email': records[0][7],
-                'streetaddress': records[0][3],
-                'city': records[0][4],
-                'state': records[0][5],
-                'zip': records[0][6]
-            }
-
-            # Update last login time and commit
-            updateQuery = 'UPDATE users SET lastlogin = %s WHERE userid = %s'
-            cursor.execute(updateQuery, (datetime.datetime.now(), records[0][0]))
-            conn.commit()
-                   
-            return redirect(url_for('home'))
-        else:
-            return redirect(url_for('login')) # 'bad username or password'
-    else:
-            return redirect(url_for('login')) # 'user not found']
- 
 @app.route('/timeline', methods=['GET','POST'])
 def showTimeline():
     # Check if the user is not logged in and redirect if necessary
@@ -259,7 +228,9 @@ def showTimeline():
     # Get the user email from the session to use in queries
     user_id= session['user']['id']
 
-    message_filter = request.args.get('message_filter').title()
+    message_filter = request.args.get('message_filter')
+    if message_filter:
+        message_filter = message_filter.title()
 
     # Prepare a cursor to execute queries
 
@@ -313,7 +284,9 @@ def editSettings():
     
     # Get the user email from the session to use in queries
     user_id= session['user']['id']
-
+    firstname = session['user']['firstname']
+    lastname = session['user']['lastname']
+    lastlogin = session['user']['lastlogin']  
     message_filter = None
 
     # Prepare a cursor to execute queries
@@ -343,7 +316,7 @@ def editSettings():
         text, thread, subject = row[0],row[1], row[2]
         r = dict(text=text, thread=thread, subject=subject)
         feed.append(r)
-    return render_template('editAccountSettings.html',)
+    return render_template('editAccountSettings.html',firstname=firstname,lastname=lastname,lastlogin=lastlogin)
 
 if __name__ == "__main__":
     app.run(debug=True)

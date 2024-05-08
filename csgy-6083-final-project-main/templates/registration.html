@@ -95,7 +95,7 @@
 </head>
 <body>
   <div class="register-container">
-    <form id="register-form" action="/registerAuth" method="POST" >
+    <form action="/registerAuth" method="POST" >
         <label for="fname">First Name:</label>
         <input type="text" placeholder="First Name" id="fname" name="fname" required>
 
@@ -122,7 +122,10 @@
 
         <button type="submit">Register</button>
         <br><br>
-        <a href="./login.html">Already a user? Login here</a>
+          {% if error %}
+		      <p class="error"><strong>Error:</strong> {{error}}</p>
+	        {% endif %}
+        <a href="/login">Already a user? Login here</a>
     </form>
   </div>
 
