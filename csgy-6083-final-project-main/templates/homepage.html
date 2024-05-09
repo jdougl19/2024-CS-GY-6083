@@ -46,7 +46,7 @@
                         <a href="/timeline" class="nav-link">Timeline</a>
                     </li>
                     <li class="nav-item">
-                        <a href="#resume" class="nav-link">Friends</a>
+                        <a href="/" class="nav-link">Friends</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav ml-auto">
@@ -88,20 +88,23 @@
                     <div class="col-1 text-danger pt-1"><i class="ti-widget icon-lg"></i></div>
                     <div class="col-10 ml-auto mr-3">
                         <h5>Pending Friend Requests</h5>
-                        <p class="friends">
-                           
-                            {% for friend in pendingFriends %}
-                            <div>
-                                <p>{{ friend[0] }} {{ friend[1] }} - Last Login: {{ friend[2].strftime('%Y-%m-%d') }}</p>
-                                <form action="/update-friendship" method="post">
-                                    <input type="hidden" name="requester_id" value="{{ friend[3] }}">
-                                    <input type="hidden" name="receiver_id" value="{{ session['user_id'] }}">
-                                    <button type="submit" name="status" value="accepted">Accept</button>
-                                    <button type="submit" name="status" value="not accepted">Reject</button>
-                                </form>
-                            </div>
-                        {% endfor %}
-                        </p>
+                            <p class="friends">
+                                {% if pendingFriends %}
+                                    {% for friend in pendingFriends %}
+                                        <div>
+                                            <p><h6>Follow Request from: {{ friend[0] }} {{ friend[1] }} - Last Online: {{ friend[2].strftime('%Y-%m-%d') }}</h6> </p>
+                                            <form action="/" method="post">
+                                                <input type="hidden" name="requester_id" value="{{ friend[3] }}">
+                                                <input type="hidden" name="receiver_id" value="{{ friend[4] }}">
+                                                <button type="submit" name="response" class="btn btn-success" value="accepted">Accept</button>
+                                                <button type="submit" name="response" class="btn btn-danger" value="not accepted">Reject</button>
+                                            </form>
+                                        </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <p>No current pending friends.</p>
+                                {% endif %}
+                            </p>
                         <h5>Your Friends</h5>
                         <p class="friends">
                            

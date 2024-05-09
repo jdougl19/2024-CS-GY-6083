@@ -1844,7 +1844,33 @@ pre code {
     margin-left: 91.66667%;
   }
 }
+.my-button {
+  background-color: #4CAF50; /* Green background */
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 5px; /* Rounded corners */
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
 
+.my-button:hover {
+  background-color: #45a049; /* Darker shade of green */
+  box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2);
+}
+
+.my-button-danger {
+  background-color: #f44336; /* Red background for reject */
+}
+
+.my-button-danger:hover {
+  background-color: #da190b;
+}
 .table {
   width: 100%;
   margin-bottom: 1rem;

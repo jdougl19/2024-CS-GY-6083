@@ -21,7 +21,7 @@
                     
                     <div class="header-content">
                         <h4 class="header-subtitle" ></h4>
-                        <h1 class="header-title">{{firstname}}  {{lastname}}</h1>
+                        <h5 class="header-title">{{firstname}}  {{lastname}}</h5>
                         <h6 class="header-mono" >Last Online: {{lastlogin}}</h6>
                     </div>
                 </div>
@@ -43,7 +43,7 @@
                         <a href="/timeline" class="nav-link">Time Line</a>
                     </li>
                     <li class="nav-item">
-                        <a href="#resume" class="nav-link">Friends</a>
+                        <a href="/" class="nav-link">Friends</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav brand">
@@ -93,16 +93,12 @@
                                                             <a href="?message_filter=friend" title="">Friend Feeds</a>
                                                         </li>
                                                         <li>
-                                                            <i class="ti-user"></i>
-                                                            <a href="#messages" title="">Neighbor Feeds</a>
-                                                        </li>
-                                                        <li>
                                                             <i class="ti-bell"></i>
-                                                            <a href="#messages" title="">New messages</a>
+                                                            <a href="?recent=true" title="">New messages</a>
                                                         </li>
                                                         <li>
                                                             <i class="ti-comments-smiley"></i>
-                                                            <a href="#messages" title="">New Block/Hood Joiners</a>
+                                                            <a href="/timelinetest" title="">New Block/Hood Joiners</a>
                                                         </li>
                                                     </ul>
                                                 </div>
@@ -114,6 +110,7 @@
                         </div>
                     </div>
                 </div>
+              
                 <div class="col-lg-4 about-card">
                     <h3 class="font-weight-light">Messages</h3>
                     <span class="line mb-5"></span>
@@ -122,31 +119,98 @@
                         <div class="col-10 ml-auto mr-3">
                             <h6 id="feed-section-header">Message Feed</h6>
                             <p id="feed-section-body" ></p>
-                            {% for thread in threads %}
-        <table class="message-table">
-            <thead>
-                <tr>
-                    <th>{{ thread.subject }}</th> <!-- Thread subject as the header -->
-                </tr>
-            </thead>
-            <tbody>
-                {% for message in thread.messages %}
-                    <tr>
-                        <td>{{ message.text }}</td> <!-- Each message text under the thread subject -->
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    {% endfor %}
+                            <div class="container">
+                               
+                                {% if visibility_groups %}
+                                    {% for visibility, threads in visibility_groups.items() %}
+                            
+                                        {% if threads %}
+                                            {% for thread_id, thread in threads.items() %}
+                                                <div class="thread">
+                                                    <h3>{{ thread.subject }}</h3>
+                                                    <h6>#{{ visibility }} Feed</h6>
+                                                    {% if thread.messages %}
+                                                        {% for message in thread.messages %}
+                                                            <div class="message">
+                                                                <p>{{ message.title }}: {{ message.text }}</p>
+                                                                <p>From: {{ message.author }} on {{ message.timestamp }}</p>
+                                                            </div>
+                                                        {% endfor %}
+                                                    {% else %}
+                                                        <p>No messages in this thread.</p>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        {% else %}
+                                            <p>No threads in this category.</p>
+                                        {% endif %}
+                                    {% endfor %}
+                                {% else %}
+                                    <p>No messages to display.</p>
+                                {% endif %}
+                            </div>
                          
                         </div>
                     </div>
-
+                    <form method="post">
+                        <h4>Start or replay to a thread</h4>
+                        <!-- Existing or New Thread Selection -->
+                        <select name="thread_id">
+                            <option value="">Start a New Thread</option>
+                            {% for thread in existing_threads %}
+                                <option value="{{ thread[0] }}">{{ thread[1] or 'No Subject Available' }}</option>
+                            {% endfor %}
+                        </select>
+                    
+                        <!-- Subject for New Thread -->
+                        <input type="text" name="subject" placeholder="Subject for new thread" />
+                        <br>
+                        <br>
+                        <!-- Title for Message -->
+                        <input type="text" name="title" placeholder="Title of your message" required/>
+                        <br>
+                        <br>
+                        <!-- Message Text -->
+                        <textarea name="message_text" placeholder="Write your message here..." required></textarea>
+                        <br>
+                        <!-- Visibility Type -->
+                        <select name="visibility_type">
+                            <option value="Block">Block</option>
+                            <option value="Hood">Hood</option>
+                            <option value="Friends">Friends</option>
+                        </select>
+                    
+                        <button type="submit" class="btn btn-success">Post Message</button>
+                    </form>
+                    <BR>
+                    <form action="{{ url_for('timeline') }}" method="post">
+                        <h4>Send a Direct Message</h4>
+                        <select name="receiver_id">
+                            {% for user in all_users %}
+                                {% if user.UserID != session['user']['id'] %}
+                                    <option value="{{ user.UserID }}">{{ user.FirstName }} {{ user.LastName }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <textarea name="direct_message_text" placeholder="Your message..."></textarea>
+                        <BR>
+                        <button type="submit" class="btn btn-success">Send Direct Message</button>
+                    </form>
                     <!-- Other messages sections -->
                 </div>
                 <div class="col-lg-4 about-card">
                     <h3 class="font-weight-light">Friends</h3>
                     <span class="line mb-5"></span>
+                    <h6>New Members in Your Block/Hood since you were last online</h6>
+        {% if new_members %}
+            <ul>
+                {% for member in new_members %}
+                    <li>{{ member[0] }} {{ member[1] }} - Joined: {{ member[3].strftime('%Y-%m-%d') }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p>No new members to display.</p>
+        {% endif %}
                     <!-- Friends content -->
                 </div>
             </div>

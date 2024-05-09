@@ -19,7 +19,7 @@
             <div class="header-content">
                 <h4 class="header-subtitle" ></h4>
                 <h1 class="header-title">{{firstname}}  {{lastname}}</h1>
-                <h6 class="header-mono" >Last Online: {{lastlogin}}</h6>
+               
             </div>
         </div>
     </header>
@@ -37,7 +37,7 @@
                         <a href="/timeline" class="nav-link">Time Line</a>
                     </li>
                     <li class="nav-item">
-                        <a href="#resume" class="nav-link">Friends</a>
+                        <a href="/" class="nav-link">Friends</a>
                     </li>
                 </ul>
                 <ul class="navbar-nav brand">
@@ -63,50 +63,57 @@
     <br>
     <br>
     <div class="userupdate-container">
-        <form id="user-update-form" action="#" method="POST" >
+        <form id="editAccountSettings"  method="POST" >
             <div class="container">
                 <h2 class="mb-5 pb-4"><span class="text-danger">Edit Basic Information</span> </h2> 
 
             <label for="street">Street:</label>
-            <input type="text" placeholder="Street" id="street" name="street" required>
-                    <Br>
-                        <br>
+            <input type="text" placeholder="Street" id="streetaddress" name="streetaddress" required>
+            <Br>
+            <br>
             <label for="city">City:</label>
             <input type="text" placeholder="City" id="city" name="city" required>
-                        <br><br>
+            <br>
+            <br>
             <label for="state">State:</label>
             <input type="text" placeholder="State" id="state" name="state" required>
             <BR>
-                <br>
+            <br>
             <label for="zipcode">Zipcode:</label>
             <input type="text" placeholder="Zipcode" id="zipcode" name="zipcode" required>
-                        <BR>
-                            <br>
-            <label for="email">Email:</label>
-            <input type="email" id="email" placeholder="Email" name="email" required>
-            <BR><br>
-            <label for="password">Password:</label>
-            <input type="password" placeholder="Password" id="password" name="password" required>
-            <label for="password">Confirm Password:</label>
-            <input type="password" placeholder="Confirm Password" id="password" name="password" required>
-            <br><br>
-            <label for="password">Update Photo:</label>
-            <input type="password" placeholder="Photo url" id="UpdatePhoto" name="password" required>
-            <br><br>
-            <div class="form-group">	
-                <label class="control-label" for="textarea">Profiletext</label><i class="mtrl-select"></i>
-                <BR>
-                <textarea rows="3" id="textarea" required="required"></textarea>
-              </div>
-              <div class="form-group">	
-                <label class="control-label" for="textarea">Family Details</label><i class="mtrl-select"></i>
-                <BR>
-                <textarea rows="3" id="textarea" required="required"></textarea>
-              </div>
-            <div class="submit-btns">
-                <button type="button" class="mtr-btn"><span>Cancel</span></button>
-                <button type="button" class="mtr-btn"><span>Update</span></button>
+            <BR>
+            <br>
+           
+            <label for="photo">Update Photo:</label>
+            <input type="text" placeholder="Photo url" id="UpdatePhoto" name="photo" required>
+            <br>
+            <br>
+            <div class="form-group">
+                <label class="control-label" for="profiletext">Profile Text</label><i class="mtrl-select"></i>
+                <br>
+                <textarea rows="3" id="profiletext" name="profiletext" required="required"></textarea>
             </div>
+
+            <div class="form-group">
+                <label class="control-label" for="familydetails">Family Details</label><i class="mtrl-select"></i>
+                <br>
+                <textarea rows="3" id="familydetails" name="familydetails" required="required"></textarea>
+            </div>
+
+            <div class="submit-btns">
+                <button type="submit" class="mtr-btn"><span>Update</span></button>
+                <button type="submit" class="mtr-btn"><span>Cancel</span></button>
+         
+            </div>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert {{ category }}">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
             <br><br>
             
         </form>
