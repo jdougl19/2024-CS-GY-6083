@@ -8,7 +8,6 @@ from flask import (
 )
 import psycopg2 
 from psycopg2 import extras
-import bcrypt
 import pandas as pd
 import datetime
 import random
@@ -22,8 +21,8 @@ cors = CORS(app)
 # app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Connect to the database 
-conn = psycopg2.connect(database="project", user="postgres", 
-                        password="root", host="localhost", port="5432") 
+conn = psycopg2.connect(database="HoodHub", user="postgres", 
+                        password="201099", host="localhost", port="5432") 
 cursor = conn.cursor(cursor_factory=extras.DictCursor)
 # Ensure to close cursor and connection properly in actual app logic
 conn.commit()
@@ -193,7 +192,7 @@ def showTimeline():
     lastlogin = session['user'].get('lastlogin')  # Ensure lastlogin is properly fetched and used
     message_filter = request.args.get('message_filter')
 
-    
+    #search_results_data = []
 
         
     # Fetching existing threads and other necessary data
@@ -233,8 +232,8 @@ def showTimeline():
            max_id = cursor.fetchone()[0]
            new_thread_id = max_id + 1 if max_id is not None else 1
            print('no error')
-           insert_thread_query = "INSERT INTO Thread (ThreadID, Subject, AuthorID) VALUES (%s, %s, %s);"
-           cursor.execute(insert_thread_query, (new_thread_id, subject, user_id))
+           insert_thread_query = "INSERT INTO Thread (ThreadID, Subject) VALUES (%s, %s);"
+           cursor.execute(insert_thread_query, (new_thread_id, subject))
              # Insert initial message for new thread
            post_message_query = """
             INSERT INTO Message (Title, TextBody, AuthorID, ThreadID, Timestamp, VisibilityType) 
@@ -244,9 +243,46 @@ def showTimeline():
 
            conn.commit()
 
+        keyword = request.form.get('keyword')
+    
+        if keyword:
+
+            search_query = """
+            SELECT mr.MessageID, m.Title, m.TextBody, m.Timestamp, u.FirstName, u.LastName
+            FROM MessageRecipient mr
+            JOIN Message m ON m.Messageid = mr.MessageID
+            JOIN Users u on u.UserId = m.authorID
+            WHERE mr.recipientId = %s AND (m.TextBody ILIKE %s OR m.Title ILIKE %s)
+            """
+            params = [user_id, '%' + keyword + '%', '%' + keyword + '%']
+            
+            cursor.execute(search_query, tuple(params))
+            search_results = cursor.fetchall()
+            
+            # Prepare search results data
+            search_results_data = []
+            for row in search_results:
+                message_id, title, text, timestamp, author_firstname, author_lastname = row
+                search_results_data.append({
+                    'message_id': message_id,
+                    'title': title,
+                    'text': text,
+                    'timestamp': timestamp.isoformat(),
+                    'author_firstname': author_firstname,
+                    'author_lastname': author_lastname
+                })
+
+        
+
     # Fetch existing threads to populate the form dropdown
-    fetch_threads_query = "SELECT threadid, Subject FROM Thread ORDER BY ThreadID DESC"
-    cursor.execute(fetch_threads_query)
+    fetch_threads_query = """
+    
+    select t.threadid, t.subject from Thread t
+    join message m on m.ThreadId = t.ThreadId
+    join messagerecipient mr on mr.MessageId = m.MessageId
+    where mr.RecipientId = %s
+    """
+    cursor.execute(fetch_threads_query, (user_id,))
     existing_threads = cursor.fetchall()
     
     print("Existing threads:", existing_threads)  # Debug output
@@ -306,8 +342,6 @@ def showTimeline():
 
         # Collect recent messages
         recent_messages.append(message)
-
-   
 
     return render_template('timeline.html',existing_threads=existing_threads, visibility_groups=visibility_groups, recent_messages=recent_messages, firstname=session['user']['firstname'], lastname=session['user']['lastname'], lastlogin=lastlogin)
 
@@ -441,9 +475,135 @@ def showTimelinetest():
 
     return render_template('timeline.html', threads=threads, new_members=new_members, firstname=session['user']['firstname'], lastname=session['user']['lastname'], lastlogin=lastlogin.strftime("%Y-%m-%d"))
 
+@app.route('/follow/block', methods=['POST'])
+def follow_block():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user']['id']
+    block_name = request.form.get('block_name')  # Get block name from request JSON
+    
+    # Query to retrieve the BlockID based on block name
+    block_query = """
+    SELECT b.BlockID
+    FROM Block b
+    WHERE b.BlockName = %s
+    """
+    cursor.execute(block_query, (block_name,))
+    block_id = cursor.fetchone()
+    
+    if not block_id:
+        return "Block not found.", 404
+    
+    # Check if the user is already following the block
+    check_follow_query = """
+    SELECT COUNT(*)
+    FROM BlockFollowing
+    WHERE UserID = %s AND BlockID = %s
+    """
+    cursor.execute(check_follow_query, (user_id, block_id[0]))
+    if cursor.fetchone()[0] > 0:
+        return "Already following this block.", 400
+    
+    # Insert record into BlockFollowing table
+    follow_query = """
+    INSERT INTO BlockFollowing (UserID, BlockID)
+    VALUES (%s, %s)
+    """
+    cursor.execute(follow_query, (user_id, block_id[0]))
+    conn.commit()
+    
+    return "Successfully followed block.", 201
+
+@app.route('/follow/neighbor', methods=['POST'])
+def follow_neighbour():
+    if 'user' not in session:
+        return redirect(url_for('login'))
+    
+    user_id = session['user']['id']
+    first = request.form.get('first_name')  # Get block name from request JSON
+    last = request.form.get('last_name') 
+    
+    # Query to retrieve the BlockID based on block name
+    block_query = """
+    SELECT UserId
+    FROM Users
+    WHERE FirstName = %s AND LastName = %s
+    """
+    cursor.execute(block_query, (first,last))
+    block_id = cursor.fetchone()
+    
+    if not block_id:
+        return "User not found.", 404
+    
+    
+    # Check if the user is already following the block
+    check_follow_query = """
+    SELECT COUNT(*)
+    FROM Neighbor
+    WHERE (UserId = %s AND NeighborId = %s) OR (UserId = %s AND NeighborId = %s)
+    """
+    cursor.execute(check_follow_query, (user_id, block_id[0], block_id[0], user_id))
+    if cursor.fetchone()[0] > 0:
+        return "This person is already your neighbor.", 400
+    
+    # Insert record into BlockFollowing table
+    follow_query = """
+    INSERT INTO Neighbor (UserID, NeighborId)
+    VALUES (%s, %s)
+    """
+    cursor.execute(follow_query, (user_id, block_id[0]))
+    conn.commit()
+    
+    return "You have a new neighbour, Yay!.", 201
+
+
+
+# @app.route('/search/messages', methods=['POST'])
+# def search_messages():
+#     # Get keyword from query parameter
+#     if 'user' not in session:
+#         return redirect(url_for('login'))
+    
+#     # Get the user email from the session to use in queries
+#     user_id= session['user']['id']
+#     keyword = request.form.get('keyword')
+
+#     # latitude = request.args.get('latitude')  # Optional: latitude for geographical search
+#     # longitude = request.args.get('longitude')  # Optional: longitude for geographical search
+    
+#     # Perform search based on keyword and/or geographical proximity
+#     search_query = """
+#     SELECT mr.MessageID, m.Title, m.TextBody, m.Timestamp, u.FirstName, u.LastName
+#     FROM MessageRecipient mr
+#     JOIN Message m ON m.Messageid = mr.MessageID
+#     JOIN Users u on u.UserId = m.authorID
+#     WHERE mr.recipientId = %s AND (m.TextBody ILIKE %s OR m.Title ILIKE %s)
+#     """
+#     params = [user_id, '%' + keyword + '%', '%' + keyword + '%']
+    
+#     # if latitude and longitude:
+#     #     search_query += " AND earth_distance(ll_to_earth(m.Latitude, m.Longitude), ll_to_earth(%s, %s)) < m.Radius"
+#     #     params.extend([latitude, longitude])
+    
+#     cursor.execute(search_query, tuple(params))
+#     search_results = cursor.fetchall()
+    
+#     # Prepare search results data
+#     search_results_data = []
+#     for row in search_results:
+#         message_id, title, text, timestamp, author_firstname, author_lastname = row
+#         search_results_data.append({
+#             'message_id': message_id,
+#             'title': title,
+#             'text': text,
+#             'timestamp': timestamp.isoformat(),
+#             'author_firstname': author_firstname,
+#             'author_lastname': author_lastname
+#         })
+    
+#     return render_template('timeline.html', search_results=search_results_data)
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
-
-if __name__ == "__main__":
     app.run(debug=True)

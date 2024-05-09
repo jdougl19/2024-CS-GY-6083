@@ -100,6 +100,32 @@
                                                             <i class="ti-comments-smiley"></i>
                                                             <a href="/timelinetest" title="">New Block/Hood Joiners</a>
                                                         </li>
+                                                        <div class="follow-block-form-container">
+                                                            <h2>Follow Block</h2>
+                                                            <form id="followBlockForm" action="/follow/block" method="POST">
+                                                                <li>
+                                                                    <i class="ti-plus"></i>
+                                                                    <input type="text" id="blockName" name="block_name" placeholder="Enter block name...">
+                                                                    <button type="submit" class="btn btn-primary">Follow</button>
+                                                                </li>
+                                                            </form>
+                                                        </div>
+                                                        <div class="follow-neighbor-form-container">
+                                                            <h2>Follow Neighbor</h2>
+                                                            <form id="followNeighborForm" action="/follow/neighbor" method="POST">
+                                                                <li>
+                                                                    <label for="firstName">First Name:</label>
+                                                                    <input type="text" id="firstName" name="first_name" placeholder="Enter first name...">
+                                                                </li>
+                                                                <li>
+                                                                    <label for="lastName">Last Name:</label>
+                                                                    <input type="text" id="lastName" name="last_name" placeholder="Enter last name...">
+                                                                    </li>
+                                                                    <li>
+                                                                        <button type="submit" class="btn btn-primary">Follow</button>
+                                                                    </li>
+                                                            </form>
+                                                        </div>                                                                                                                        
                                                     </ul>
                                                 </div>
                                             </aside>
@@ -152,8 +178,26 @@
                          
                         </div>
                     </div>
+
+                    <form id="searchForm" action = "{{ url_for('timeline') }}" method="POST">
+                        <h4>Search Messages</h4>
+                        <input type="text" id="keyword" name="keyword" placeholder="Enter keyword...">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                    </form>
+
+                    <!-- Search Results -->
+                    <div id="searchResults">
+                        {% for result in search_results %}
+                            <p><strong>Title:</strong> {{ result.title }}</p>
+                            <p><strong>Text:</strong> {{ result.text }}</p>
+                            <p><strong>Author:</strong> {{ result.author_firstname }} {{ result.author_lastname }}</p>
+                            <p><strong>Timestamp:</strong> {{ result.timestamp }}</p>
+                            <hr>
+                        {% endfor %}
+                    </div>
+
                     <form method="post">
-                        <h4>Start or replay to a thread</h4>
+                        <h4>Start or reply to a thread</h4>
                         <!-- Existing or New Thread Selection -->
                         <select name="thread_id">
                             <option value="">Start a New Thread</option>
@@ -236,7 +280,7 @@
     <footer class="footer py-3">
 
     </footer>
-
+    
 </body>
 
 </html>
