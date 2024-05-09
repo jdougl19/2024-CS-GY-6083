@@ -101,7 +101,7 @@
                                                             <a href="/timelinetest" title="">New Block/Hood Joiners</a>
                                                         </li>
                                                         <div class="follow-block-form-container">
-                                                            <h2>Follow Block</h2>
+                                                            <h5>Follow Block</h5>
                                                             <form id="followBlockForm" action="/follow/block" method="POST">
                                                                 <li>
                                                                     <i class="ti-plus"></i>
@@ -110,8 +110,9 @@
                                                                 </li>
                                                             </form>
                                                         </div>
+                                                        <br>
                                                         <div class="follow-neighbor-form-container">
-                                                            <h2>Follow Neighbor</h2>
+                                                            <h5>Follow Neighbor</h5>
                                                             <form id="followNeighborForm" action="/follow/neighbor" method="POST">
                                                                 <li>
                                                                     <label for="firstName">First Name:</label>
@@ -180,7 +181,7 @@
                     </div>
 
                     <form id="searchForm" action = "{{ url_for('timeline') }}" method="POST">
-                        <h4>Search Messages</h4>
+                        <h5>Search Messages</h5>
                         <input type="text" id="keyword" name="keyword" placeholder="Enter keyword...">
                         <button type="submit" class="btn btn-primary">Search</button>
                     </form>
@@ -197,49 +198,62 @@
                     </div>
 
                     <form method="post">
-                        <h4>Start or reply to a thread</h4>
+                        <h5>Start or reply to a thread</h5>
+                        
                         <!-- Existing or New Thread Selection -->
-                        <select name="thread_id">
+                        <label for="thread_choice">Choose a thread or start a new one:</label>
+                        <select name="thread_id" id="thread_choice" style="width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box;">
                             <option value="">Start a New Thread</option>
                             {% for thread in existing_threads %}
                                 <option value="{{ thread[0] }}">{{ thread[1] or 'No Subject Available' }}</option>
                             {% endfor %}
                         </select>
-                    
+                        <br><br>
+                        
                         <!-- Subject for New Thread -->
-                        <input type="text" name="subject" placeholder="Subject for new thread" />
-                        <br>
-                        <br>
+                        <label for="subject">Subject (for new threads):</label>
+                        <input type="text" id="subject" name="subject" placeholder="Enter subject for new thread" style="width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box;" />
+                        <br><br>
+                        
                         <!-- Title for Message -->
-                        <input type="text" name="title" placeholder="Title of your message" required/>
-                        <br>
-                        <br>
+                        <label for="title">Message Title:</label>
+                        <input type="text" id="title" name="title" placeholder="Title of your message" required style="width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box;" />
+                        <br><br>
+                        
                         <!-- Message Text -->
-                        <textarea name="message_text" placeholder="Write your message here..." required></textarea>
-                        <br>
+                        <label for="message_text">Message:</label>
+                        <textarea id="message_text" name="message_text" placeholder="Write your message here..." required style="width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box; height: 100px;"></textarea>
+                        <br><br>
+                        
                         <!-- Visibility Type -->
-                        <select name="visibility_type">
-                            <option value="Block">Block</option>
-                            <option value="Hood">Hood</option>
-                            <option value="Friends">Friends</option>
+                        <label for="visibility_type">Feed:</label>
+                        <select name="visibility_type" id="visibility_type" style="width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box;" onchange="this.form.submit()">
+                            <option value="Block" {% if request.form.visibility_type == 'Block' %}selected{% endif %}>Block</option>
+                            <option value="Hood" {% if request.form.visibility_type == 'Hood' %}selected{% endif %}>Hood</option>
+                            <option value="Friends" {% if request.form.visibility_type == 'Friends' %}selected{% endif %}>Friends</option>
+                            <option value="DM" {% if request.form.visibility_type == 'DM' %}selected{% endif %}>Direct Message</option>
                         </select>
+                        <br><br>
+                        
+                        <!-- Recipient for Direct Message -->
+                        {% if request.form.visibility_type == 'DM' %}
+                            <div id="dm_recipient">
+                                <label for="recipient_id">Select User for DM:</label>
+                                <select name="recipient_id" id="recipient_id" style="width: 100%; padding: 10px; margin-bottom: 15px; box-sizing: border-box;">
+                                    {% for user in all_users %}
+                                        <option value="{{ user[0] }}">{{ user[1] }} {{ user[2] }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        {% endif %}
+                        <br>
+                        
+                        <button type="submit" class="btn btn-success" style="padding: 10px 20px;">Post Message</button>
+                    </form>
                     
-                        <button type="submit" class="btn btn-success">Post Message</button>
-                    </form>
+                    
                     <BR>
-                    <form action="{{ url_for('timeline') }}" method="post">
-                        <h4>Send a Direct Message</h4>
-                        <select name="receiver_id">
-                            {% for user in all_users %}
-                                {% if user.UserID != session['user']['id'] %}
-                                    <option value="{{ user.UserID }}">{{ user.FirstName }} {{ user.LastName }}</option>
-                                {% endif %}
-                            {% endfor %}
-                        </select>
-                        <textarea name="direct_message_text" placeholder="Your message..."></textarea>
-                        <BR>
-                        <button type="submit" class="btn btn-success">Send Direct Message</button>
-                    </form>
+                   
                     <!-- Other messages sections -->
                 </div>
                 <div class="col-lg-4 about-card">

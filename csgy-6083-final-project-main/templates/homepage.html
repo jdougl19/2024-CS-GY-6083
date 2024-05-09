@@ -119,6 +119,18 @@
                         {% endif %}
                         </p>
                     </div>
+                    <form action="{{ url_for('home') }}" method="post">
+                        <h4>Send a Friend Request</h4>
+                        <label for="friend_id">Select a user to send a friend request:</label>
+                        <select name="friend_id" id="friend_id">
+                            {% for user in all_users %}
+                                {% if user[8] != user_id %}
+                                    <option value="{{ user[8] }}">{{ user[0] }} {{ user[1] }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                        <button type="submit" name="action" class="btn btn-success"value="send_request">Send Request</button>
+                    </form>
                 </div>
             </div>
         </div>

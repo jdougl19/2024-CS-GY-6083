@@ -8,6 +8,7 @@ from flask import (
 )
 import psycopg2 
 from psycopg2 import extras
+import bcrypt
 import pandas as pd
 import datetime
 import random
@@ -21,11 +22,12 @@ cors = CORS(app)
 # app.config['CORS_HEADERS'] = 'Content-Type'
 
 # Connect to the database 
-conn = psycopg2.connect(database="HoodHub", user="postgres", 
-                        password="201099", host="localhost", port="5432") 
+conn = psycopg2.connect(database="project", user="postgres", 
+                        password="root", host="localhost", port="5432") 
 cursor = conn.cursor(cursor_factory=extras.DictCursor)
 # Ensure to close cursor and connection properly in actual app logic
 conn.commit()
+
 
 app.config["SECRET_KEY"] = 'some key that you will never guess'
 
@@ -81,40 +83,66 @@ def home():
     friends = cursor.fetchall()
     #gets all the people you are friends with 
     pendingfriends_query =  """
-            SELECT u.firstname, u.lastname, u.lastlogin,f.requester_id, f.receiver_id, f.updatedat
-            FROM users u
-            JOIN friendship f ON u.userid = f.receiver_id OR u.userid = f.requester_id
-            WHERE (f.receiver_id = %s OR f.requester_id = %s) AND f.status = 'Pending'
-            AND u.userid != %s;
+            SELECT u.firstname, u.lastname, u.lastlogin, f.requester_id, f.receiver_id, f.updatedat
+                FROM users u
+                JOIN friendship f ON u.userid = f.requester_id
+                WHERE f.receiver_id = %s AND f.status = 'Pending';
         """
     #firstname,lastname,lastlogin = friends_data
-    cursor.execute(pendingfriends_query, (user_id,user_id,user_id,))
+    cursor.execute(pendingfriends_query, (user_id,))
     pendingfriends = cursor.fetchall()
     print(pendingfriends)
     # Close cursor and connection
-   
+    all_users_query = """
+    SELECT u.firstname, u.lastname, u.lastlogin, u.email, u.streetaddress, u.city, u.state, u.zip, u.userid
+    FROM users u
+    WHERE u.userid != %s
+    AND u.userid NOT IN (
+        SELECT f.requester_id FROM friendship f WHERE f.receiver_id = %s
+        UNION
+        SELECT f.receiver_id FROM friendship f WHERE f.requester_id = %s
+    )
+    """
+    cursor.execute(all_users_query, (user_id, user_id, user_id))
+    all_users = cursor.fetchall()
+
 
     #lastLogin = 'now'
     #ProfiletText = 'blah blah'
     print("Friends:", friends) 
+    print(all_users)
     #FRIEND REQUEST ACCEPT/DECLINE
     if request.method == 'POST':
-        # Safely get the form data with defaults to prevent UnboundLocalError
-        requester_id = request.form.get('requester_id', None)
-        receiver_id = request.form.get('receiver_id', None)
-        response = request.form.get('response', None)
-
-        print(f"Requester ID: {requester_id}, Receiver ID: {receiver_id}, Response: {response}")
-
-        if requester_id and receiver_id and response:
-            status = "Accepted" if response == "accepted" else "not accepted"
-            date = datetime.datetime.now()
-            query = 'UPDATE friendship SET status = %s, updatedat = %s WHERE (requester_id = %s AND receiver_id = %s) OR (requester_id = %s AND receiver_id = %s)'
-            cursor.execute(query, (status, date, requester_id, receiver_id, receiver_id, requester_id))
-            conn.commit()
-            print("Number of rows updated:", cursor.rowcount)
+        action = request.form.get('action', '')
+        if action == 'send_request':
+            friend_id = request.form.get('friend_id')
+            if friend_id:
+                send_request_query = """
+                INSERT INTO friendship (requester_id, receiver_id, status, createdat)
+                VALUES (%s, %s, 'Pending', %s)
+                """
+                cursor.execute(send_request_query, (user_id, friend_id, datetime.datetime.now()))
+                conn.commit()
+            else:
+                print("No friend selected for the request.")
         else:
-            print("Error: Missing data for requester_id, receiver_id, or response.")
+            # Handle friend request accept/decline
+            requester_id = request.form.get('requester_id', None)
+            receiver_id = request.form.get('receiver_id', None)
+            response = request.form.get('response', None)
+
+            print(f"Requester ID: {requester_id}, Receiver ID: {receiver_id}, Response: {response}")
+
+            if requester_id and receiver_id and response:
+                status = "Accepted" if response == "accepted" else "not accepted"
+                date = datetime.datetime.now()
+                query = 'UPDATE friendship SET status = %s, updatedat = %s WHERE (requester_id = %s AND receiver_id = %s) OR (requester_id = %s AND receiver_id = %s)'
+                cursor.execute(query, (status, date, requester_id, receiver_id, receiver_id, requester_id))
+                conn.commit()
+                print("Number of rows updated:", cursor.rowcount)
+            else:
+                print("Error: Missing data for requester_id, receiver_id, or response.")
+
 
     cursor.close()
     return render_template('homepage.html',
@@ -129,7 +157,9 @@ def home():
                            state=state,
                            zip=zip,
                            friends=friends,
-                           pendingFriends=pendingfriends
+                           pendingFriends=pendingfriends,
+                           all_users=all_users,
+                           user_id=user_id
                            )
 
 @app.route('/login', methods=['GET'])
@@ -183,135 +213,135 @@ def loginAuth():
     else:
             return redirect(url_for('login')) # 'user not found']
  
-@app.route('/timeline', methods=['GET', 'POST'],endpoint='timeline')
+
+@app.route('/timeline', methods=['GET', 'POST'], endpoint='timeline')
 def showTimeline():
     if 'user' not in session:
         return redirect(url_for('login'))
 
     user_id = session['user']['id']
-    lastlogin = session['user'].get('lastlogin')  # Ensure lastlogin is properly fetched and used
+    lastlogin = session['user'].get('lastlogin')
     message_filter = request.args.get('message_filter')
 
-    #search_results_data = []
+    cursor = conn.cursor()
 
-        
-    # Fetching existing threads and other necessary data
+    # Fetch all users except the current user for DM purposes
     cursor.execute("SELECT UserID, FirstName, LastName FROM Users WHERE UserID != %s", (user_id,))
     all_users = cursor.fetchall()
 
-
-
     if request.method == 'POST':
-        user_id = session['user']['id']
         message_text = request.form['message_text']
-        title = request.form['title']
+        title = request.form.get('title', '')
         subject = request.form.get('subject', '')
         visibility_type = request.form['visibility_type']
         thread_id = request.form.get('thread_id')
+        recipient_id = request.form.get('recipient_id', None)
 
         current_time = datetime.datetime.now()
-        if 'direct_message_text' in request.form:
-            receiver_id = request.form['receiver_id']
-            direct_message_text = request.form['direct_message_text']
-            insert_query = "INSERT INTO DirectMessages (SenderID, ReceiverID, MessageText) VALUES (%s, %s, %s)"
-            cursor.execute(insert_query, (user_id, receiver_id, direct_message_text))
+
+        if visibility_type == 'DM' and recipient_id:
+            # Insert direct message
+            post_message_query = """
+            INSERT INTO Message (Title, TextBody, AuthorID, ThreadID, Timestamp, VisibilityType, recipientid) 
+            VALUES (%s, %s, %s, NULL, %s, 'DM', %s)
+            """
+            cursor.execute(post_message_query, (title, message_text, user_id, current_time, recipient_id))
+        elif thread_id:
+            # Posting to an existing thread
+            post_message_query = """
+            INSERT INTO Message (Title, TextBody, AuthorID, ThreadID, Timestamp, VisibilityType) 
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(post_message_query, (title, message_text, user_id, thread_id, current_time, visibility_type))
+        else:
+            # Starting a new thread
+            cursor.execute("SELECT COALESCE(MAX(ThreadID), 0) + 1 FROM Thread;")
+            new_thread_id = cursor.fetchone()[0]
+            insert_thread_query = "INSERT INTO Thread (ThreadID, Subject) VALUES (%s, %s);"
+            cursor.execute(insert_thread_query, (new_thread_id, subject))
+            # Insert initial message for new thread
+            post_message_query = """
+            INSERT INTO Message (Title, TextBody, AuthorID, ThreadID, Timestamp, VisibilityType) 
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(post_message_query, (title, message_text, user_id, new_thread_id, current_time, visibility_type))
 
         conn.commit()
 
-        if thread_id:
-            # Posting to an existing thread
-             post_message_query = """
-            INSERT INTO Message (Title, TextBody, AuthorID, ThreadID, Timestamp, VisibilityType) 
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """
-             cursor.execute(post_message_query, (title, message_text, user_id, thread_id, current_time, visibility_type))
-             print('Yes error')
-        else:
-            # Starting a new thread
-           cursor.execute("SELECT MAX(ThreadID) FROM Thread;")
-           max_id = cursor.fetchone()[0]
-           new_thread_id = max_id + 1 if max_id is not None else 1
-           print('no error')
-           insert_thread_query = "INSERT INTO Thread (ThreadID, Subject) VALUES (%s, %s);"
-           cursor.execute(insert_thread_query, (new_thread_id, subject))
-             # Insert initial message for new thread
-           post_message_query = """
-            INSERT INTO Message (Title, TextBody, AuthorID, ThreadID, Timestamp, VisibilityType) 
-            VALUES (%s, %s, %s, %s, %s, %s)
-            """
-           cursor.execute(post_message_query, (title, message_text, user_id, new_thread_id, current_time, visibility_type))
+    keyword = request.form.get('keyword')
 
-           conn.commit()
+    if keyword:
+        search_query = """
+        SELECT mr.MessageID, m.Title, m.TextBody, m.Timestamp, u.FirstName, u.LastName
+        FROM MessageRecipient mr
+        JOIN Message m ON m.MessageID = mr.MessageID
+        JOIN Users u ON u.UserID = m.AuthorID
+        WHERE mr.recipientID = %s AND (m.TextBody ILIKE %s OR m.Title ILIKE %s)
+        """
+        params = [user_id, '%' + keyword + '%', '%' + keyword + '%']
 
-        keyword = request.form.get('keyword')
-    
-        if keyword:
+        cursor.execute(search_query, tuple(params))
+        search_results = cursor.fetchall()
 
-            search_query = """
-            SELECT mr.MessageID, m.Title, m.TextBody, m.Timestamp, u.FirstName, u.LastName
-            FROM MessageRecipient mr
-            JOIN Message m ON m.Messageid = mr.MessageID
-            JOIN Users u on u.UserId = m.authorID
-            WHERE mr.recipientId = %s AND (m.TextBody ILIKE %s OR m.Title ILIKE %s)
-            """
-            params = [user_id, '%' + keyword + '%', '%' + keyword + '%']
-            
-            cursor.execute(search_query, tuple(params))
-            search_results = cursor.fetchall()
-            
-            # Prepare search results data
-            search_results_data = []
-            for row in search_results:
-                message_id, title, text, timestamp, author_firstname, author_lastname = row
-                search_results_data.append({
-                    'message_id': message_id,
-                    'title': title,
-                    'text': text,
-                    'timestamp': timestamp.isoformat(),
-                    'author_firstname': author_firstname,
-                    'author_lastname': author_lastname
-                })
-
-        
+        search_results_data = []
+        for row in search_results:
+            message_id, title, text, timestamp, author_firstname, author_lastname = row
+            search_results_data.append({
+                'message_id': message_id,
+                'title': title,
+                'text': text,
+                'timestamp': timestamp.isoformat(),
+                'author_firstname': author_firstname,
+                'author_lastname': author_lastname
+            })
 
     # Fetch existing threads to populate the form dropdown
     fetch_threads_query = """
-    
-    select t.threadid, t.subject from Thread t
-    join message m on m.ThreadId = t.ThreadId
-    join messagerecipient mr on mr.MessageId = m.MessageId
-    where mr.RecipientId = %s
+    SELECT t.threadid, t.subject 
+    FROM Thread t
+    JOIN Message m ON m.ThreadID = t.ThreadID
+    JOIN MessageRecipient mr ON mr.MessageID = m.MessageID
+    WHERE mr.RecipientID = %s
     """
     cursor.execute(fetch_threads_query, (user_id,))
     existing_threads = cursor.fetchall()
-    
-    print("Existing threads:", existing_threads)  # Debug output
+
+    # Fetch direct messages for the user
+    direct_messages_query = """
+    SELECT m.MessageID, m.Title, m.TextBody, m.Timestamp, u.FirstName, u.LastName
+    FROM Message m
+    JOIN Users u ON u.UserID = m.AuthorID
+    WHERE m.recipientid = %s AND m.VisibilityType = 'DM'
+    ORDER BY m.Timestamp DESC
+    """
+    cursor.execute(direct_messages_query, (user_id,))
+    direct_messages = cursor.fetchall()
+
     if message_filter:
         message_filter = message_filter.title()
         visibility_query = """
-            SELECT m.TextBody, t.ThreadID, t.Subject, u2.FirstName AS AuthorFirstName, 
-                   u2.LastName AS AuthorLastName, m.Timestamp, m.VisibilityType, m.Title
-            FROM Thread t
-            JOIN Message m ON m.ThreadID = t.ThreadID
-            JOIN MessageRecipient mr ON mr.MessageID = m.MessageID
-            JOIN Users u ON u.UserID = mr.RecipientID
-            JOIN Users u2 ON u2.UserID = m.AuthorID
-            WHERE u.UserID = %s AND mr.isRead = FALSE AND m.VisibilityType = %s
-            ORDER BY m.Timestamp DESC
+        SELECT m.TextBody, t.ThreadID, t.Subject, u2.FirstName AS AuthorFirstName, 
+               u2.LastName AS AuthorLastName, m.Timestamp, m.VisibilityType, m.Title
+        FROM Thread t
+        JOIN Message m ON m.ThreadID = t.ThreadID
+        JOIN MessageRecipient mr ON mr.MessageID = m.MessageID
+        JOIN Users u ON u.UserID = mr.RecipientID
+        JOIN Users u2 ON u2.UserID = m.AuthorID
+        WHERE u.UserID = %s AND mr.isRead = FALSE AND m.VisibilityType = %s
+        ORDER BY m.Timestamp DESC
         """
         cursor.execute(visibility_query, (user_id, message_filter))
     else:
-        # Fetch recent messages since last login, regardless of visibility type
         recent_query = """
-            SELECT m.TextBody, t.ThreadID, t.Subject, u2.FirstName AS AuthorFirstName, 
-                   u2.LastName AS AuthorLastName, m.Timestamp, m.VisibilityType, m.Title
-            FROM Thread t
-            JOIN Message m ON m.ThreadID = t.ThreadID
-            JOIN MessageRecipient mr ON mr.MessageID = m.MessageID
-            JOIN Users u ON u.UserID = mr.RecipientID
-            JOIN Users u2 ON u2.UserID = m.AuthorID
-            WHERE u.UserID = %s AND mr.isRead = FALSE AND m.Timestamp > %s
-            ORDER BY m.Timestamp DESC
+        SELECT m.TextBody, t.ThreadID, t.Subject, u2.FirstName AS AuthorFirstName, 
+               u2.LastName AS AuthorLastName, m.Timestamp, m.VisibilityType, m.Title
+        FROM Thread t
+        JOIN Message m ON m.ThreadID = t.ThreadID
+        JOIN MessageRecipient mr ON mr.MessageID = m.MessageID
+        JOIN Users u ON u.UserID = mr.RecipientID
+        JOIN Users u2 ON u2.UserID = m.AuthorID
+        WHERE u.UserID = %s AND mr.isRead = FALSE AND m.Timestamp > %s
+        ORDER BY m.Timestamp DESC
         """
         cursor.execute(recent_query, (user_id, lastlogin))
 
@@ -330,7 +360,6 @@ def showTimeline():
             'timestamp': formatted_timestamp
         }
 
-        # Group by visibility type
         if visibility_type not in visibility_groups:
             visibility_groups[visibility_type] = {}
         if thread_id not in visibility_groups[visibility_type]:
@@ -340,11 +369,19 @@ def showTimeline():
             }
         visibility_groups[visibility_type][thread_id]['messages'].append(message)
 
-        # Collect recent messages
         recent_messages.append(message)
 
-    return render_template('timeline.html',existing_threads=existing_threads, visibility_groups=visibility_groups, recent_messages=recent_messages, firstname=session['user']['firstname'], lastname=session['user']['lastname'], lastlogin=lastlogin)
+    cursor.close()
 
+    return render_template('timeline.html', 
+                           existing_threads=existing_threads, 
+                           all_users=all_users,  # Ensure this is passed to the template
+                           direct_messages=direct_messages, 
+                           visibility_groups=visibility_groups, 
+                           recent_messages=recent_messages, 
+                           firstname=session['user']['firstname'], 
+                           lastname=session['user']['lastname'], 
+                           lastlogin=lastlogin)
 
 @app.route('/register')
 def register():

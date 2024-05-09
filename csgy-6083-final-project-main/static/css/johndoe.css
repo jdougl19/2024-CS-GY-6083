@@ -2853,6 +2853,8 @@ fieldset:disabled a.btn {
   color: #fff;
   background-color: #F85C70;
   border-color: #F85C70;
+  padding: 5px 10px; /* Adjust padding */
+  font-size: 12px;   /* Adjust font size */
 }
 
 .btn-primary:hover {
@@ -2921,6 +2923,8 @@ fieldset:disabled a.btn {
   color: #212529;
   background-color: #A3C14A;
   border-color: #A3C14A;
+  padding: 5px 10px; /* Adjust padding */
+  font-size: 12px;   /* Adjust font size */
 }
 
 .btn-success:hover {
